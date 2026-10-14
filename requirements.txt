@@ -1,0 +1,9 @@
+numpy>=1.26
+scipy>=1.11
+librosa>=0.10.1
+soundfile>=0.12
+moderngl>=5.10
+pillow>=10.0
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
