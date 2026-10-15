@@ -6,7 +6,9 @@ A minimalist, audio-reactive music visualizer. Drop in a song and watch every be
 
 [Watch the demo with sound (MP4)](docs/demo.mp4)
 
-<!-- Add the demo track credit here, e.g. "Demo audio: <title> by <artist> (<license>)" -->
+CREDIT='Demo audio: "Song Title" by Artist (license or source)'
+sed -i "s|^Iris by The Goo Goo Dolls\$|$CREDIT|" README.md
+grep -n "Demo audio" README.md
 
 ## Features
 
@@ -139,3 +141,7 @@ setup_wsl.sh       Convenience setup script for Ubuntu under WSL2
 ## Built by
 
 Kartikey. [Portfolio](https://kartikeybuilds.vercel.app) · [GitHub](https://github.com/kartikeyy12)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
