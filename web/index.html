@@ -22,8 +22,9 @@ svg{display:block}
 [hidden]{display:none!important}
 
 /* ---------- landing ---------- */
-.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+.overlay{position:fixed;inset:0;display:flex;overflow-y:auto;text-align:center;
   padding:24px;background:radial-gradient(ellipse at center,rgba(7,9,12,.58),rgba(7,9,12,.84));transition:opacity .7s ease,visibility .7s}
+.stack{margin:auto;display:flex;flex-direction:column;align-items:center;padding:8px 0}
 .overlay.gone{opacity:0;visibility:hidden;pointer-events:none}
 .brand{letter-spacing:.46em;text-transform:uppercase;font-size:11.5px;color:var(--mut);margin-bottom:30px;padding-left:.46em}
 h1{font-weight:300;font-size:clamp(34px,5.4vw,64px);letter-spacing:-.025em;line-height:1.08;margin:0 0 14px}
@@ -36,12 +37,15 @@ h1 em{font-style:normal;color:var(--acc)}
 .or{color:var(--dim);font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin:20px 0 14px}
 .ghost{padding:10px 20px;border-radius:999px;border:1px solid var(--line2);color:var(--fg);font-size:14px;transition:background .25s}
 .ghost:hover{background:rgba(255,255,255,.07)}
+.altrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.hint2{color:var(--dim);font-size:12.5px;margin:12px 0 0;max-width:30em}
 .loading{width:min(380px,84vw);margin-top:6px}
 .loading .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
 .loading .bar i{display:block;height:100%;width:0;background:var(--acc);border-radius:3px;transition:width .3s ease}
 .loading span{display:block;margin-top:12px;color:var(--mut);font-size:13.5px}
 .err{color:#f2b8b5;font-size:14px;margin-top:18px;max-width:34em}
-.hint{position:absolute;bottom:22px;color:var(--dim);font-size:12.5px}
+.hint{margin-top:28px;color:var(--dim);font-size:12.5px}
+@media (max-height:720px){.brand{margin-bottom:14px}h1{font-size:clamp(28px,4.4vw,44px);margin-bottom:8px}.sub{margin-bottom:18px;font-size:14.5px}.drop{padding:18px 20px}.or{margin:12px 0 10px}.hint{margin-top:16px}}
 
 /* ---------- HUD ---------- */
 .hud{position:fixed;inset:0;pointer-events:none;transition:opacity .55s ease}
@@ -131,7 +135,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:#0a0d11}
 <body>
 <canvas id="gl"></canvas>
 
-<main id="landing" class="overlay">
+<main id="landing" class="overlay"><div class="stack">
   <div class="brand">FreqFlux</div>
   <h1>Let your music <em>move</em>.</h1>
   <p class="sub">Drop a song and watch every beat and note move through quiet light, live in your browser.</p>
@@ -141,11 +145,12 @@ a.btn{display:block;text-align:center;text-decoration:none;color:#0a0d11}
     <span class="drop-sub">or click to choose a file</span>
   </label>
   <div class="or">or</div>
-  <button id="micBtn" class="ghost">Use microphone</button>
+  <div class="altrow"><button id="micBtn" class="ghost">Use microphone</button><button id="capBtn" class="ghost" title="Visualize Spotify, YouTube or anything else playing on this computer">Capture tab or system audio</button></div>
+  <p class="hint2">Capture works in Chrome and Edge: pick a tab (or screen) and tick &ldquo;Share audio&rdquo;. Keep this window visible.</p>
   <div id="loading" class="loading" hidden><div class="bar"><i id="loadFill"></i></div><span id="loadText">Reading your song</span></div>
   <p id="err" class="err" hidden></p>
-  <div class="hint">Space play/pause &nbsp;·&nbsp; F fullscreen &nbsp;·&nbsp; 1 2 3 scenes &nbsp;·&nbsp; arrows seek</div>
-</main>
+  <div class="hint">Space play/pause &nbsp;·&nbsp; F fullscreen &nbsp;·&nbsp; 1 to 5 scenes &nbsp;·&nbsp; arrows seek</div>
+</div></main>
 
 <section id="hud" class="hud hidden">
   <header class="top">
@@ -192,7 +197,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:#0a0d11}
   <div class="ctl"><label>Treble <span id="v_treble"></span></label><input id="treble" type="range" min="0" max="2" step="0.05"></div>
   <div class="ctl"><label>Onset sensitivity <span id="v_onset"></span></label><input id="onset" type="range" min="0" max="1" step="0.05"></div>
   <div class="ctl"><label>Sync offset <span id="v_offset"></span></label><input id="offset" type="range" min="-300" max="300" step="5"></div>
-  <p class="note">Your browser reports about <b id="latMs">0</b> ms of audio output delay and it is already compensated. If the picture still feels early or late (Bluetooth speakers), nudge the offset.</p>
+  <p class="note">Your browser reports about <b id="latMs">0</b> ms of audio output delay and it is already compensated. If the picture still feels early or late (Bluetooth speakers), nudge the offset. In capture mode this also sets how long the picture is held back to match the sound.</p>
 
   <div id="exportSec"><h2>Share</h2>
   <button id="btnExport" class="btn">Export as MP4 video</button>
@@ -313,7 +318,7 @@ function resolvePalette(pal, bright) {
 
 /* ===================== motion state (mirrors scenes.SceneState) ===================== */
 const S = { bass: 0, mid: 0, treble: 0, kick: 0, snare: 0, hat: 0, bright: 0.4, T: 0, flow: 0, vel: 0, beat: 0,
-  shift: 0, shiftTarget: 0, lastShift: -1e9, clock: 0, ripples: [], chroma: new Float32Array(12) };
+  shift: 0, shiftTarget: 0, lastShift: -1e9, clock: 0, ripples: [], chroma: new Float32Array(12), nKick: 0, nSnare: 0, nHat: 0 };
 const follow = (y, x, dt, a, r) => y + (x - y) * (1 - Math.exp(-dt / Math.max(x > y ? a : r, 1e-4)));
 const smooth = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 const emptyF = () => ({ b: 0, m: 0, t: 0, kick: 0, snare: 0, hat: 0, any: 0, br: S.bright, beat: S.beat, chroma: new Float32Array(12) });
@@ -329,8 +334,9 @@ function advance(f, dt) {
   S.beat = f.beat; S.T += dt * set.motion;
   for (const r of S.ripples) r[0] += dt;
   S.ripples = S.ripples.filter(r => r[0] < ST.ripple_life_s);
-  if (f.kick > 0) S.ripples.push([0, f.kick, 0]);
+  if (f.kick > 0) { S.ripples.push([0, f.kick, 0]); S.nKick++; }
   if (f.snare >= 0.5) S.ripples.push([0, f.snare, 1]);
+  if (f.snare > 0) S.nSnare++; if (f.hat > 0) S.nHat++;
   if (S.ripples.length > ST.ripple_max) S.ripples = S.ripples.slice(-ST.ripple_max);
   S.vel += ST.flow_kick * f.kick + ST.flow_snare * f.snare; S.vel *= Math.exp(-dt / ST.flow_decay_s);
   S.flow += dt * set.motion * (ST.flow_base + ST.flow_level * S.bass) + S.vel * dt * set.motion;
@@ -432,21 +438,52 @@ function detUpdate(d, f, dt) {
   d.hist.push(f); if (d.hist.length > 30) d.hist.shift(); d.prev = f;
   return out;
 }
-async function startMic() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+/* Live analysis (microphone or captured tab/system audio) runs on its own 60 Hz timer so it behaves the same on a
+   60, 144 or 240 Hz display. Each tick is queued with a timestamp, and the render loop plays the queue back
+   delayed by the speaker latency, so the picture lines up with what you actually hear. */
+let micKind = 'mic';               // 'mic' | 'capture'
+async function openAnalysis(stream, extraTracks) {
   actx = new (window.AudioContext || window.webkitAudioContext)();
   const src = actx.createMediaStreamSource(stream);
   const a1 = actx.createAnalyser(); a1.fftSize = 4096; a1.smoothingTimeConstant = 0; a1.minDecibels = -140;
   const a2 = actx.createAnalyser(); a2.fftSize = 1024; a2.smoothingTimeConstant = 0; a2.minDecibels = -140;
   src.connect(a1); src.connect(a2);
-  mic = { stream, a1, a2, d1: new Float32Array(a1.frequencyBinCount), d2: new Float32Array(a2.frequencyBinCount), tab: buildTables(actx.sampleRate),
+  mic = { stream, extra: extraTracks || [], a1, a2, d1: new Float32Array(a1.frequencyBinCount), d2: new Float32Array(a2.frequencyBinCount), tab: buildTables(actx.sampleRate),
     hi: new Float32Array(NB).fill(-75), sp: new Float32Array(NB), chroma: new Float32Array(12), lvlPeak: 1e-6, prevLm: null,
-    fpeak: [0.01, 0.01, 0.01], det: [makeDet(), makeDet(), makeDet()], beatPos: 0, kickT: [], hist: new Uint8Array(NB * NH), histAcc: 0 };
+    fpeak: [0.01, 0.01, 0.01], det: [makeDet(), makeDet(), makeDet()], beatPos: 0, kickT: [], clock: 0, hist: new Uint8Array(NB * NH), histAcc: 0,
+    queue: [], last: emptyF(), lastSpec: new Uint8Array(NB * NH), tickAt: performance.now(), timer: 0 };
+  mic.timer = setInterval(micTick, 1000 / 60);
 }
-function stopMic() { if (!mic) return; mic.stream.getTracks().forEach(t => t.stop()); try { actx.close(); } catch (e) {} mic = null; actx = null; }
-function micFeatures(dt) {
-  const out = emptyF(); specFade = 1;
-  if (!mic) return out;
+async function startMic() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  micKind = 'mic'; await openAnalysis(stream);
+}
+async function startCapture() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error('this browser cannot capture audio. Use Chrome or Edge.');
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  const aTracks = stream.getAudioTracks(), vTracks = stream.getVideoTracks();
+  if (!aTracks.length) {
+    stream.getTracks().forEach(t => t.stop());
+    throw new Error('no audio was shared. In the picker choose a Chrome Tab (or Entire Screen) and tick "Share tab audio" or "Share system audio".');
+  }
+  vTracks.forEach(t => { try { t.applyConstraints({ frameRate: 1 }); } catch (e) {} });      // the picture is never used, keep it cheap
+  micKind = 'capture';
+  await openAnalysis(new MediaStream(aTracks), vTracks);
+  aTracks[0].addEventListener('ended', () => { if (mode === 'mic' && micKind === 'capture') { toast('Capture stopped'); goLanding(); } });
+  measureLatency();
+}
+function stopMic() {
+  if (!mic) return;
+  clearInterval(mic.timer);
+  mic.stream.getTracks().forEach(t => t.stop()); mic.extra.forEach(t => t.stop());
+  try { actx.close(); } catch (e) {}
+  mic = null; actx = null;
+}
+function micTick() {
+  if (!mic) return;
+  const nowP = performance.now();
+  const dt = clamp((nowP - mic.tickAt) / 1000, 0.004, 0.1); mic.tickAt = nowP; mic.clock += dt;
+  const out = emptyF();
   mic.a1.getFloatFrequencyData(mic.d1); mic.a2.getFloatFrequencyData(mic.d2);
   const ca = 1 - Math.exp(-dt / 0.012), cr = 1 - Math.exp(-dt / 0.12);
   for (let k = 0; k < NB; k++) {
@@ -479,7 +516,7 @@ function micFeatures(dt) {
   mic.prevLm = lm;
   out.kick = ev[0]; out.snare = ev[1]; out.hat = ev[2]; out.any = Math.max(ev[0], ev[1], ev[2]);
   // beat position: advance at the tempo implied by recent kicks, and snap toward the nearest beat on each kick
-  const now = S.clock; if (ev[0] > 0) { mic.kickT.push(now); if (mic.kickT.length > 8) mic.kickT.shift(); }
+  if (ev[0] > 0) { mic.kickT.push(mic.clock); if (mic.kickT.length > 8) mic.kickT.shift(); }
   let iv = 0.5; if (mic.kickT.length >= 3) { const d = []; for (let i = 1; i < mic.kickT.length; i++) d.push(mic.kickT[i] - mic.kickT[i - 1]); d.sort((a, b) => a - b); iv = clamp(d[d.length >> 1], 0.3, 1.0); }
   mic.beatPos += dt / iv;
   if (ev[0] > 0) { const tgt = Math.round(mic.beatPos); mic.beatPos += (tgt - mic.beatPos) * 0.5; }
@@ -487,7 +524,25 @@ function micFeatures(dt) {
   // spectrum history at a steady 60 rows per second
   mic.histAcc = Math.min(mic.histAcc + dt, 0.1);
   while (mic.histAcc >= 1 / 60) { mic.hist.copyWithin(NB, 0, NB * (NH - 1)); for (let k = 0; k < NB; k++) mic.hist[k] = mic.sp[k] * 255; mic.histAcc -= 1 / 60; }
-  specData.set(mic.hist);
+  mic.queue.push({ t: nowP, f: out, spec: mic.hist.slice() });
+  if (mic.queue.length > 120) mic.queue.shift();
+}
+function micFeatures(dt) {
+  const out = emptyF(); specFade = 1;
+  if (!mic) return out;
+  // captured audio reaches your ears after the output latency, so release analysis results that much later
+  const delay = clamp((micKind === 'capture' ? latencyMs : 0) - set.offset, 0, 600);
+  const cutoff = performance.now() - delay;
+  const ev = { kick: 0, snare: 0, hat: 0, any: 0 }; let got = null;
+  while (mic.queue.length && mic.queue[0].t <= cutoff) {
+    const e = mic.queue.shift(); got = e;
+    ev.kick = Math.max(ev.kick, e.f.kick); ev.snare = Math.max(ev.snare, e.f.snare); ev.hat = Math.max(ev.hat, e.f.hat); ev.any = Math.max(ev.any, e.f.any);
+  }
+  if (got) { mic.last = got.f; mic.lastSpec = got.spec; }
+  const f = mic.last;
+  out.b = f.b; out.m = f.m; out.t = f.t; out.br = f.br; out.beat = f.beat; out.chroma.set(f.chroma);
+  out.kick = ev.kick; out.snare = ev.snare; out.hat = ev.hat; out.any = ev.any;
+  specData.set(mic.lastSpec);
   return out;
 }
 const amb = { k: -1, note: 0 };
@@ -516,6 +571,7 @@ function loop(now) {
   if (mode === 'file') uiTick();
 }
 requestAnimationFrame(loop);
+if (location.search.includes('debug')) window.__ff = { S, get mic() { return mic; }, get mode() { return mode; }, get latencyMs() { return latencyMs; } };
 
 /* ===================== UI wiring ===================== */
 const landing = $('#landing'), hud = $('#hud');
@@ -534,7 +590,7 @@ $('#seek').addEventListener('change', e => { const d = audio.duration || session
 
 async function togglePlay() {
   if (mode === 'file') { if (audio.paused) { try { await audio.play(); } catch (e) { toast('Press play to start'); } } else audio.pause(); setPlayIcon(); }
-  else if (mode === 'mic') { if (mic) stopMic(); else { try { await startMic(); } catch (e) { toast('Microphone unavailable: ' + e.message); } } setPlayIcon(); }
+  else if (mode === 'mic') { if (mic) stopMic(); else { try { await (micKind === 'capture' ? startCapture() : startMic()); } catch (e) { toast((micKind === 'capture' ? 'Capture unavailable: ' : 'Microphone unavailable: ') + e.message); } } setPlayIcon(); }
 }
 $('#btnPlay').onclick = togglePlay;
 audio.addEventListener('play', setPlayIcon); audio.addEventListener('pause', setPlayIcon);
@@ -628,16 +684,23 @@ $('#drop').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key ===
 ['dragenter', 'dragover'].forEach(ev => addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.add('over'); }));
 ['dragleave', 'drop'].forEach(ev => addEventListener(ev, e => { e.preventDefault(); $('#drop').classList.remove('over'); }));
 addEventListener('drop', e => { if (!mode) handleFile(e.dataTransfer.files[0]); });
-$('#micBtn').onclick = async () => {
+async function enterLive(kind) {
   showError('');
-  try { await startMic(); } catch (e) { showError('Microphone unavailable: ' + e.message + (location.hostname !== 'localhost' ? ' (open the app at http://localhost:7860)' : '')); return; }
-  mode = 'mic'; session = null; $('#title').textContent = 'Microphone'; $('#exportSec').hidden = true; showPlayer(false); setPlayIcon();
-};
-$('#btnNew').onclick = () => {
+  try { await (kind === 'capture' ? startCapture() : startMic()); }
+  catch (e) {
+    if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) { showError(kind === 'capture' ? 'Capture was cancelled.' : 'Microphone permission was denied.'); return; }
+    showError((kind === 'capture' ? 'Capture unavailable: ' : 'Microphone unavailable: ') + e.message + (kind === 'mic' && location.hostname !== 'localhost' ? ' (open the app at http://localhost:7860)' : '')); return;
+  }
+  mode = 'mic'; session = null; $('#title').textContent = kind === 'capture' ? 'Tab or system audio' : 'Microphone'; $('#exportSec').hidden = true; showPlayer(false); setPlayIcon();
+}
+$('#micBtn').onclick = () => enterLive('mic');
+$('#capBtn').onclick = () => enterLive('capture');
+function goLanding() {
   audio.pause(); audio.removeAttribute('src'); audio.load(); stopMic(); mode = null; session = null; F = SP = EV = null;
   $('#panel').classList.remove('open'); hud.classList.add('hidden'); landing.classList.remove('gone'); $('#file').value = '';
   document.body.classList.remove('idle'); hud.classList.remove('idle');
-};
+}
+$('#btnNew').onclick = goLanding;
 
 /* click the picture to play/pause (touch screens: tap only reveals the controls) */
 canvas.addEventListener('click', () => { if (!mode) return; wake(); if (!matchMedia('(pointer: coarse)').matches) togglePlay(); });

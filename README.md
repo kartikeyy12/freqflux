@@ -1,5 +1,7 @@
 # FreqFlux
 
+[![CI](https://github.com/kartikeyy12/freqflux/actions/workflows/ci.yml/badge.svg)](https://github.com/kartikeyy12/freqflux/actions/workflows/ci.yml)
+
 A minimalist, audio-reactive music visualizer. Drop in a song and watch every beat and note move through quiet, line-based visuals in real time in the browser, then optionally export the same look as a 1080p60 MP4.
 
 ![FreqFlux demo](docs/demo.gif)
@@ -16,7 +18,7 @@ grep -n "Demo audio" README.md
 - **Motion tied to the music, not to loudness.** Kicks launch travelling ripples and push the pattern, mid-band hits and new notes add faster ripples, hi-hats make the lines shimmer, and the notes currently sounding shape the geometry.
 - **Five scenes**, all thin lines on a dark ground: Resonance, Harmonic String, Ripple Orb, Aurora Veil, Soft Waves.
 - **Palettes and controls.** Six muted palettes plus a four-colour custom palette, and sliders for motion, brightness, dynamics, bass, mids, treble, onset sensitivity and sync offset.
-- **Microphone mode** for live visuals from the browser mic.
+- **Live modes.** Visualize the microphone, or capture a browser tab or your system audio (Spotify, YouTube, anything playing on the computer) without uploading a file.
 - **MP4 export** that matches the live view exactly: headless OpenGL frames piped to FFmpeg, with the original audio muxed in.
 
 ## Quick start
@@ -58,6 +60,15 @@ The controls auto-hide while playing. Move the mouse to bring them back.
 
 **Sync.** The player compensates for the browser-reported audio output latency automatically. If the picture still feels early or late (Bluetooth speakers, for example), use the sync offset slider in the settings panel.
 
+### Visualize what is playing on your computer
+
+Choose **Capture tab or system audio** on the start screen, pick a browser tab (or a whole screen) in the browser's share dialog, and tick **Share tab audio** or **Share system audio**. FreqFlux only listens to the audio. The picture of the screen is never used.
+
+- Works in Chrome and Edge. Firefox and Safari cannot capture audio this way.
+- Tab audio works on every platform. System audio needs Windows or ChromeOS with "Entire screen" selected.
+- Keep the FreqFlux window visible (a second monitor, or side by side). Browsers throttle hidden windows.
+- The picture is held back by your browser's reported audio output delay so it lines up with what you hear. Use the sync offset slider for Bluetooth speakers.
+
 ### Export a video
 
 From the UI: open the settings panel, choose **Export as MP4 video**, pick resolution, frame rate and quality.
@@ -81,6 +92,14 @@ python renderer.py --audio path/to/song.mp3 --frame 3000 --scene all   # render 
 ```
 
 If headless OpenGL fails to start, try `LIBGL_ALWAYS_SOFTWARE=1`, run under `xvfb-run -a`, or set `FREQFLUX_GL_BACKEND` (for example to `egl`) to force a specific backend.
+
+### Evaluate your own songs
+
+```bash
+python tools/evaluate.py ~/Music/test_songs
+```
+
+For every song this prints tempo, event rates and how well the kicks sit on the detected beat grid, flags likely problems (half or double tempo, flat loudness, flickering notes), and writes `reports/<song>_timeline.png`: beat grid, kick, mid and hi-hat events, band levels, pitch classes and the spectrum on one time axis. Add `--frames` for a contact sheet of the Resonance scene. If a song looks wrong in the visualizer, the report and timeline usually show why.
 
 ## Scenes
 
@@ -116,7 +135,16 @@ If headless OpenGL fails to start, try `LIBGL_ALWAYS_SOFTWARE=1`, run under `xvf
 
 ### Validation
 
-The analysis was checked against a synthetic ground-truth track (120 BPM with known kicks, snares, hats and a melody of known notes): tempo detected as 120.0 BPM with the beat grid on the kicks, 47 of 48 kicks matched within 50 ms (median error 0 ms), and all 44 melody notes mapped to the correct pitch class. Exported files showed an audio/video end offset under 1 ms at 60, 59.94 and 24 fps.
+The analysis was checked against a synthetic ground-truth track (120 BPM with known kicks, snares, hats and a melody of known notes): tempo detected as 120.0 BPM with the beat grid on the kicks, 47 of 48 kicks matched within 50 ms (median error 0 ms), and all 44 melody notes mapped to the correct pitch class. Exported files showed an audio/video end offset under 1 ms at 60, 59.94 and 24 fps. These checks live in `tests/` and run in CI.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+The suite generates synthetic music with known ground truth (kicks, snares, hats, a melody of known notes, several tempos, swing, rubato, a loud master and drumless music) and checks the frame clock, beat grid, event timing, pitch mapping, scene shaders, renderer determinism and the web API. Tests that need headless OpenGL skip themselves when it is not available. GitHub Actions runs everything on every push.
 
 ## Project layout
 
@@ -128,6 +156,9 @@ renderer.py        Headless ModernGL renderer used for export
 video_exporter.py  Render loop piped into FFmpeg, with progress, cancel and verification
 web/index.html     The browser UI and WebGL2 player (single file, no build step)
 docs/              Demo media
+tests/             pytest suite and the synthetic music generator
+tools/             evaluate.py: analyze your own songs and write a report
+.github/workflows  CI
 setup_wsl.sh       Convenience setup script for Ubuntu under WSL2
 ```
 
@@ -135,7 +166,7 @@ setup_wsl.sh       Convenience setup script for Ubuntu under WSL2
 
 - Beat tracking assumes a fairly steady tempo. On rubato or beatless music the tempo-locked sway can drift, though kick ripples and note tracking still work from the actual audio.
 - Pitch analysis is chroma based. Dense or noisy mixes give busier Resonance figures, and the Dynamics slider can calm them.
-- Microphone mode uses simpler, causal versions of the same analysis (adaptive levels and an estimated tempo), so it is less precise than file playback.
+- Microphone and capture modes use simpler, causal versions of the same analysis (adaptive levels and an estimated tempo), so they are less precise than file playback. Capture needs Chrome or Edge.
 - One export runs at a time. Export speed depends on the GPU. With software OpenGL it is much slower.
 
 ## Built by
